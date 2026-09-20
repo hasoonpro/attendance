@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>BFC Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1410;
+    --surface:#131F19;
+    --surface-2:#1A2820;
+    --border:#243529;
+    --text:#F5F3EA;
+    --text-muted:#87998C;
+    --gold:#D4A64A;
+    --gold-soft:rgba(212,166,74,0.14);
+    --present:#4CAF6D;
+    --present-dim:rgba(76,175,109,0.14);
+    --absent:#E0685C;
+    --absent-dim:rgba(224,104,92,0.14);
+    --radius:16px;
+    --radius-sm:10px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior-y:none;
+  }
+  #app{
+    max-width:480px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .display{font-family:'Oswald',sans-serif; text-transform:uppercase;}
+  ::selection{background:var(--gold-soft);}
+
+  /* HEADER */
+  .top-header{
+    padding:22px 20px 18px;
+    position:relative;
+    overflow:hidden;
+    border-bottom:1px solid var(--border);
+    background:linear-gradient(180deg, #101B15 0%, var(--bg) 100%);
+  }
+  .top-header .pitch-mark{
+    position:absolute; top:-40px; right:-50px; opacity:0.08; pointer-events:none;
+  }
+  .brand-row{display:flex; align-items:center; justify-content:space-between; position:relative; z-index:1;}
+  .brand{
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:30px;
+    letter-spacing:1px;
+    color:var(--gold);
+    line-height:1;
+  }
+  .brand-sub{
+    font-size:11px;
+    letter-spacing:3px;
+    color:var(--text-muted);
+    text-transform:uppercase;
+    margin-top:4px;
+    font-weight:600;
+  }
+  .back-btn{
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    width:38px; height:38px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:18px;
+    cursor:pointer;
+  }
+  .back-btn:active{background:var(--border);}
+  .header-title{position:relative; z-index:1;}
+  .screen-title{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:24px;
+    letter-spacing:0.5px;
+    text-transform:uppercase;
+  }
+  .screen-sub{color:var(--text-muted); font-size:13px; margin-top:2px;}
+
+  /* MAIN CONTENT */
+  .content{flex:1; padding:16px 16px 100px; overflow-y:auto;}
+  .content.no-nav{padding-bottom:24px;}
+
+  /* CATEGORY CARDS */
+  .cat-card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px 18px;
+    margin-bottom:12px;
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer;
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .cat-card:active{transform:scale(0.98); border-color:var(--gold-soft);}
+  .cat-name{
+    font-family:'Oswald',sans-serif;
+    font-size:22px;
+    font-weight:600;
+    letter-spacing:0.5px;
+  }
+  .cat-meta{color:var(--text-muted); font-size:12.5px; margin-top:3px;}
+  .cat-arrow{color:var(--gold); font-size:20px; opacity:0.8;}
+  .ball-badge{
+    width:44px; height:44px;
+    border-radius:50%;
+    background:var(--gold-soft);
+    display:flex; align-items:center; justify-content:center;
+    font-size:20px;
+    margin-right:14px;
+    flex-shrink:0;
+  }
+  .cat-row-left{display:flex; align-items:center;}
+
+  .add-btn{
+    width:100%;
+    background:var(--surface);
+    border:1.5px dashed var(--border);
+    color:var(--text-muted);
+    border-radius:var(--radius);
+    padding:16px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .add-btn:active{border-color:var(--gold); color:var(--gold);}
+
+  .empty-state{
+    text-align:center;
+    padding:60px 20px;
+    color:var(--text-muted);
+  }
+  .empty-state .icon{font-size:40px; margin-bottom:10px;}
+  .empty-state h3{color:var(--text); font-family:'Oswald',sans-serif; font-weight:600; font-size:20px; margin:0 0 6px;}
+  .empty-state p{font-size:13.5px; line-height:1.5; margin:0 0 18px;}
+
+  /* BOTTOM NAV */
+  .bottom-nav{
+    position:fixed;
+    bottom:0; left:0; right:0;
+    max-width:480px;
+    margin:0 auto;
+    background:rgba(19,31,25,0.92);
+    backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    display:flex;
+    padding:10px 8px calc(10px + env(safe-area-inset-bottom));
+    z-index:20;
+  }
+  .nav-item{
+    flex:1;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    background:none; border:none; color:var(--text-muted);
+    font-family:'Inter',sans-serif; font-size:11px; font-weight:600;
+    cursor:pointer; padding:4px;
+  }
+  .nav-item.active{color:var(--gold);}
+  .nav-item .nav-icon{font-size:19px;}
+
+  /* SCOREBOARD */
+  .scoreboard{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:20px;
+    margin-bottom:14px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .score-main{font-family:'Oswald',sans-serif; font-size:38px; font-weight:700; letter-spacing:1px; color:var(--gold); line-height:1;}
+  .score-label{color:var(--text-muted); font-size:11px; letter-spacing:2px; margin-top:4px; text-transform:uppercase;}
+  .score-absent{
+    text-align:right;
+    color:var(--absent);
+    font-family:'Oswald',sans-serif;
+    font-size:20px;
+    font-weight:600;
+  }
+  .score-absent small{display:block; color:var(--text-muted); font-family:'Inter',sans-serif; font-size:10.5px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; margin-top:3px;}
+
+  .date-row{
+    display:flex; align-items:center; gap:10px;
+    margin-bottom:14px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:10px 14px;
+  }
+  .date-row input[type="date"]{
+    background:none; border:none; color:var(--text);
+    font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
+    flex:1;
+    -webkit-appearance:none;
+  }
+  .date-row input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(0.7); cursor:pointer;}
+
+  /* TOGGLE (include absent) */
+  .toggle-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:12px 14px;
+    margin-bottom:14px;
+  }
+  .toggle-label{font-size:13.5px; font-weight:600; color:var(--text);}
+  .toggle-hint{font-size:11.5px; color:var(--text-muted); margin-top:2px;}
+  .toggle-switch{
+    width:46px; height:26px;
+    border-radius:20px;
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    position:relative;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .toggle-switch.on{background:var(--gold); border-color:var(--gold);}
+  .toggle-knob{
+    position:absolute; top:2px; left:2px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:var(--text-muted);
+    transition:transform .15s ease, background .15s ease;
+  }
+  .toggle-switch.on .toggle-knob{transform:translateX(20px); background:#1A1408;}
+
+  .mark-all-btn{
+    width:100%;
+    background:var(--gold);
+    color:#1A1408;
+    border:none;
+    border-radius:var(--radius-sm);
+    padding:14px;
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    cursor:pointer;
+    margin-bottom:16px;
+  }
+  .mark-all-btn:active{opacity:0.85; transform:scale(0.99);}
+
+  /* PLAYER ROWS */
+  .player-row{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .player-row.is-present{border-color:rgba(76,175,109,0.35);}
+  .player-row.is-absent{border-color:rgba(224,104,92,0.35);}
+  .player-name{font-weight:600; font-size:15.5px; margin-bottom:10px;}
+  .status-btns{display:flex; gap:8px;}
+  .status-btn{
+    flex:1;
+    padding:12px 6px;
+    border-radius:var(--radius-sm);
+    border:1.5px solid var(--border);
+    background:var(--surface-2);
+    color:var(--text-muted);
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    transition:all .1s ease;
+    display:flex; align-items:center; justify-content:center; gap:5px;
+  }
+  .status-btn:active{transform:scale(0.96);}
+  .status-btn.present.active{background:var(--present-dim); border-color:var(--present); color:var(--present);}
+  .status-btn.absent.active{background:var(--absent-dim); border-color:var(--absent); color:var(--absent);}
+
+  .sticky-bottom{
+    position:fixed; bottom:0; left:0; right:0;
+    max-width:480px; margin:0 auto;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom));
+    background:linear-gradient(0deg, var(--bg) 60%, rgba(11,20,16,0));
+    z-index:15;
+  }
+  .primary-btn{
+    width:100%;
+    background:var(--gold);
+    color:#1A1408;
+    border:none;
+    border-radius:var(--radius);
+    padding:16px;
+    font-family:'Oswald',sans-serif;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    cursor:pointer;
+    box-shadow:0 6px 20px rgba(212,166,74,0.18);
+  }
+  .primary-btn:active{transform:scale(0.98); opacity:0.9;}
+  .secondary-btn{
+    width:100%;
+    background:var(--surface-2);
+    color:var(--text);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:15px;
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    cursor:pointer;
+    margin-top:10px;
+  }
+  .secondary-btn:active{background:var(--border);}
+
+  /* GENERATE / OUTPUT */
+  .output-box{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:18px;
+    white-space:pre-wrap;
+    font-family:'Inter',sans-serif;
+    font-size:14px;
+    line-height:1.7;
+    margin-bottom:16px;
+  }
+  .copied-toast{
+    position:fixed; top:18px; left:50%; transform:translateX(-50%);
+    background:var(--gold); color:#1A1408;
+    padding:10px 18px; border-radius:30px;
+    font-weight:700; font-size:13px;
+    z-index:100;
+    box-shadow:0 8px 20px rgba(0,0,0,0.3);
+    animation:toastIn .18s ease;
+  }
+  @keyframes toastIn{from{opacity:0; transform:translate(-50%,-8px);} to{opacity:1; transform:translate(-50%,0);}}
+
+  /* HISTORY */
+  .history-group-title{
+    font-family:'Oswald',sans-serif;
+    font-size:13px; letter-spacing:2px;
+    color:var(--text-muted);
+    text-transform:uppercase;
+    margin:18px 0 10px;
+  }
+  .history-group-title:first-child{margin-top:0;}
+  .session-row{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:8px;
+    cursor:pointer;
+  }
+  .session-row:active{background:var(--surface-2);}
+  .session-date{font-weight:600; font-size:14.5px;}
+  .session-badge{
+    font-family:'Oswald',sans-serif;
+    font-weight:600; font-size:13px;
+    padding:4px 10px;
+    border-radius:20px;
+  }
+  .badge-full{background:var(--present-dim); color:var(--present);}
+  .badge-partial{background:var(--gold-soft); color:var(--gold);}
+  .badge-low{background:var(--absent-dim); color:var(--absent);}
+
+  .detail-list-title{font-size:11.5px; letter-spacing:2px; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin:16px 0 8px;}
+  .detail-player{
+    padding:11px 14px; border-radius:var(--radius-sm);
+    background:var(--surface); border:1px solid var(--border);
+    margin-bottom:7px; font-size:14.5px; font-weight:500;
+    display:flex; align-items:center; gap:8px;
+  }
+
+  /* MANAGE */
+  .manage-player-row{
+    display:flex; align-items:center; justify-content:space-between;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:13px 14px; margin-bottom:8px;
+  }
+  .icon-btn{
+    background:none; border:none; color:var(--text-muted); font-size:16px; cursor:pointer; padding:4px 8px;
+  }
+  .icon-btn.danger:active{color:var(--absent);}
+  .icon-btn:active{color:var(--gold);}
+
+  /* MODAL */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,0.55);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index:200;
+  }
+  .modal-sheet{
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px 20px 0 0;
+    width:100%; max-width:480px;
+    padding:22px 20px calc(22px + env(safe-area-inset-bottom));
+    animation:sheetUp .18s ease;
+  }
+  @keyframes sheetUp{from{transform:translateY(20px); opacity:0;} to{transform:translateY(0); opacity:1;}}
+  .modal-title{font-family:'Oswald',sans-serif; font-weight:600; font-size:19px; margin-bottom:14px; text-transform:uppercase; letter-spacing:0.5px;}
+  .modal-input{
+    width:100%; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text); border-radius:var(--radius-sm); padding:13px 14px;
+    font-family:'Inter',sans-serif; font-size:15px; margin-bottom:14px;
+  }
+  .modal-input:focus{outline:none; border-color:var(--gold);}
+  .modal-btns{display:flex; gap:10px;}
+  .modal-btns .primary-btn, .modal-btns .secondary-btn{margin-top:0;}
+
+  .confirm-text{color:var(--text-muted); font-size:14px; line-height:1.5; margin-bottom:18px;}
+
+  a, button{font-family:inherit;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+const STORAGE_KEY = 'bfc-data';
+let state = { categories: [], players: {}, sessions: {} };
+let view = { screen: 'loading' };
+let loaded = false;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+function todayISO(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function formatDateLong(iso){
+  const [y,m,d] = iso.split('-').map(Number);
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' });
+}
+function formatDateSlash(iso){
+  const [y,m,d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+function esc(s){
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function loadData(){
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    if (saved) {
+      const parsed = JSON.parse(saved);
+
+      state = {
+        categories: Array.isArray(parsed.categories) ? parsed.categories : [],
+        players: parsed.players || {},
+        sessions: parsed.sessions || {}
+      };
+    }
+  } catch(e) {
+    console.error('Load failed:', e);
+  }
+
+  loaded = true;
+  view = { screen: 'home' };
+
+  // Create the first history entry so the Android back button has
+  // somewhere to land on instead of immediately closing the app.
+  history.replaceState(
+    { screen: 'home' },
+    '',
+    location.href
+  );
+
+  render();
+}
+
+function saveData(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    console.log('BFC data saved');
+  } catch(e) {
+    console.error('Save failed:', e);
+  }
+}
+// ---------- helpers ----------
+function playersOf(catId){ return state.players[catId] || []; }
+function sessionsOf(catId){ return (state.sessions[catId] || []).slice().sort((a,b)=> b.date.localeCompare(a.date)); }
+function findSession(catId, date){ return (state.sessions[catId]||[]).find(s=>s.date===date); }
+
+function pitchMarkSVG(){
+  return `<svg class="pitch-mark" width="220" height="220" viewBox="0 0 220 220" fill="none">
+    <circle cx="150" cy="60" r="90" stroke="#D4A64A" stroke-width="2"/>
+    <circle cx="150" cy="60" r="3" fill="#D4A64A"/>
+    <line x1="0" y1="60" x2="220" y2="60" stroke="#D4A64A" stroke-width="2"/>
+  </svg>`;
+}
+
+// ---------- render router ----------
+// preserveScroll: when true, keeps the current scroll position after re-render
+// instead of jumping back to the top. Used for in-place updates (marking a
+// player present/absent, toggling settings) where the user shouldn't lose
+// their place in the list.
+function render(preserveScroll){
+  const scrollY = preserveScroll ? window.scrollY : 0;
+  const app = document.getElementById('app');
+  if (!loaded){
+    app.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;color:var(--text-muted);font-family:'Oswald',sans-serif;letter-spacing:2px;">LOADING BFC…</div>`;
+    return;
+  }
+  let html = '';
+  switch(view.screen){
+    case 'home': html = renderHome(); break;
+    case 'attendance': html = renderAttendance(); break;
+    case 'generate': html = renderGenerate(); break;
+    case 'history': html = renderHistoryList(); break;
+    case 'historyDetail': html = renderHistoryDetail(); break;
+    case 'manage': html = renderManageCategories(); break;
+    case 'managePlayers': html = renderManagePlayers(); break;
+    default: html = renderHome();
+  }
+  app.innerHTML = html + (view.modal ? view.modal : '');
+  if (preserveScroll){
+    window.scrollTo(0, scrollY);
+  } else {
+    window.scrollTo(0,0);
+  }
+}
+
+// setView now pushes a browser-history entry for every screen change (unless
+// addHistory is explicitly false), so the Android/Xiaomi system Back button
+// steps backward through the app's screens instead of closing it outright.
+function setView(v, addHistory = true){
+  view = Object.assign({}, v);
+
+  if (addHistory) {
+    history.pushState(
+      { screen: view.screen, catId: view.catId || null },
+      '',
+      location.href
+    );
+  }
+
+  render();
+}
+
+// ---------- ANDROID / BROWSER BACK BUTTON ----------
+window.addEventListener('popstate', function(event) {
+
+  // If a modal is open, the system Back button closes the modal first
+  // instead of navigating to the previous screen.
+  if (view.modal) {
+    view.modal = null;
+    render();
+    return;
+  }
+
+  const previous = event.state;
+
+  if (previous && previous.screen) {
+    view = {
+      screen: previous.screen,
+      ...(previous.catId ? { catId: previous.catId } : {})
+    };
+
+    // Restore attendance state when going back to the attendance screen
+    if (previous.screen === 'attendance' && previous.catId) {
+      const date = todayISO();
+      const existing = findSession(previous.catId, date);
+      const statusMap = {};
+
+      if (existing) {
+        existing.present.forEach(id => statusMap[id] = 'present');
+        existing.absent.forEach(id => statusMap[id] = 'absent');
+      }
+
+      view.date = date;
+      view.statusMap = statusMap;
+    }
+
+    render();
+  }
+});
+
+// ---------- HOME ----------
+function renderHome(){
+  const cats = state.categories;
+  let list = '';
+  if (cats.length === 0){
+    list = `<div class="empty-state">
+      <div class="icon">⚽</div>
+      <h3>No teams yet</h3>
+      <p>Add your first age category — like 2016 or 2017 — to start taking attendance.</p>
+      <button class="primary-btn" onclick="openAddCategoryModal()">＋ Add Category</button>
+    </div>`;
+  } else {
+    list = cats.map(c => {
+      const count = playersOf(c.id).length;
+      return `<div class="cat-card" onclick="openCategory('${c.id}')">
+        <div class="cat-row-left">
+          <div class="ball-badge">⚽</div>
+          <div>
+            <div class="cat-name">${esc(c.name)}</div>
+            <div class="cat-meta">${count} player${count!==1?'s':''}</div>
+          </div>
+        </div>
+        <div class="cat-arrow">›</div>
+      </div>`;
+    }).join('') + `<button class="add-btn" onclick="openAddCategoryModal()">＋ Add Category</button>`;
+  }
+
+  return `
+  <div class="top-header">
+    ${pitchMarkSVG()}
+    <div class="brand-row">
+      <div>
+        <div class="brand">BFC</div>
+        <div class="brand-sub">Training Attendance</div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="history-group-title" style="margin-top:4px;">Today's Sessions</div>
+    ${list}
+  </div>
+  ${renderBottomNav('home')}
+  `;
+}
+
+function renderBottomNav(active){
+  const item = (key, icon, label) => `<button class="nav-item ${active===key?'active':''}" onclick="navTo('${key}')"><span class="nav-icon">${icon}</span>${label}</button>`;
+  return `<div class="bottom-nav">
+    ${item('home','🏠','Home')}
+    ${item('history','📅','History')}
+    ${item('manage','⚙️','Manage')}
+  </div>`;
+}
+function navTo(key){
+  if (key==='home') setView({screen:'home'});
+  if (key==='history') setView({screen:'history'});
+  if (key==='manage') setView({screen:'manage'});
+}
+
+// ---------- ADD/EDIT CATEGORY MODAL ----------
+function openAddCategoryModal(){
+  view.modal = `<div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-title">New Category</div>
+      <input id="catInput" class="modal-input" placeholder="e.g. 2016" autofocus>
+      <div class="modal-btns">
+        <button class="secondary-btn" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="primary-btn" style="flex:1" onclick="submitAddCategory()">Save</button>
+      </div>
+    </div>
+  </div>`;
+  render();
+  setTimeout(()=>{ const el = document.getElementById('catInput'); if(el){ el.focus(); el.addEventListener('keydown', e=>{ if(e.key==='Enter') submitAddCategory(); }); } }, 50);
+}
+function submitAddCategory(){
+  const el = document.getElementById('catInput');
+  const val = el.value.trim();
+  if (!val) return;
+  const id = uid();
+  state.categories.push({id, name: val, includeAbsent: false});
+  state.players[id] = [];
+  state.sessions[id] = [];
+  saveData();
+  closeModal();
+  render();
+}
+function openRenameCategoryModal(catId){
+  const cat = state.categories.find(c=>c.id===catId);
+  view.modal = `<div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-title">Rename Category</div>
+      <input id="catInput" class="modal-input" value="${esc(cat.name)}" autofocus>
+      <div class="modal-btns">
+        <button class="secondary-btn" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="primary-btn" style="flex:1" onclick="submitRenameCategory('${catId}')">Save</button>
+      </div>
+    </div>
+  </div>`;
+  render();
+  setTimeout(()=>{ const el = document.getElementById('catInput'); if(el){ el.focus(); el.select(); } }, 50);
+}
+function submitRenameCategory(catId){
+  const el = document.getElementById('catInput');
+  const val = el.value.trim();
+  if (!val) return;
+  const cat = state.categories.find(c=>c.id===catId);
+  cat.name = val;
+  saveData();
+  closeModal();
+  render();
+}
+function confirmDeleteCategory(catId){
+  const cat = state.categories.find(c=>c.id===catId);
+  view.modal = `<div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-title">Delete ${esc(cat.name)}?</div>
+      <div class="confirm-text">This removes the category, its full player roster, and all saved attendance history for it. This can't be undone.</div>
+      <div class="modal-btns">
+        <button class="secondary-btn" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="primary-btn" style="flex:1; background:var(--absent); box-shadow:none;" onclick="submitDeleteCategory('${catId}')">Delete</button>
+      </div>
+    </div>
+  </div>`;
+  render();
+}
+function submitDeleteCategory(catId){
+  state.categories = state.categories.filter(c=>c.id!==catId);
+  delete state.players[catId];
+  delete state.sessions[catId];
+  saveData();
+  closeModal();
+  setView({screen:'manage'});
+}
+function closeModal(){ view.modal = null; render(); }
+
+// ---------- ATTENDANCE ----------
+function openCategory(catId){
+  const date = todayISO();
+  const existing = findSession(catId, date);
+  const statusMap = {};
+  if (existing){
+    existing.present.forEach(id => statusMap[id] = 'present');
+    existing.absent.forEach(id => statusMap[id] = 'absent');
+  }
+  setView({ screen:'attendance', catId, date, statusMap });
+}
+function renderAttendance(){
+  const cat = state.categories.find(c=>c.id===view.catId);
+  const players = playersOf(view.catId);
+  const statusMap = view.statusMap;
+  const presentCount = players.filter(p=>statusMap[p.id]==='present').length;
+  const absentCount = players.filter(p=>statusMap[p.id]==='absent').length;
+
+  if (players.length === 0){
+    return `
+    <div class="top-header">
+      <div class="brand-row">
+        <button class="back-btn" onclick="navTo('home')">‹</button>
+        <div></div>
+      </div>
+      <div class="header-title" style="margin-top:10px;">
+        <div class="screen-title">${esc(cat.name)}</div>
+      </div>
+    </div>
+    <div class="content no-nav">
+      <div class="empty-state">
+        <div class="icon">👤</div>
+        <h3>No players yet</h3>
+        <p>Add players to ${esc(cat.name)} before taking attendance.</p>
+        <button class="primary-btn" onclick="setView({screen:'managePlayers', catId:'${view.catId}'})">＋ Add Players</button>
+      </div>
+    </div>`;
+  }
+
+  const rows = players.map(p => {
+    const s = statusMap[p.id];
+    return `<div class="player-row ${s==='present'?'is-present':''} ${s==='absent'?'is-absent':''}">
+      <div class="player-name">${esc(p.name)}</div>
+      <div class="status-btns">
+        <button class="status-btn present ${s==='present'?'active':''}" onclick="setStatus('${p.id}','present')">✓ Present</button>
+        <button class="status-btn absent ${s==='absent'?'active':''}" onclick="setStatus('${p.id}','absent')">✕ Absent</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="top-header">
+    <div class="brand-row">
+      <button class="back-btn" onclick="navTo('home')">‹</button>
+      <div></div>
+    </div>
+    <div class="header-title" style="margin-top:10px;">
+      <div class="screen-title">${esc(cat.name)}</div>
+      <div class="screen-sub">Training session</div>
+    </div>
+  </div>
+  <div class="content no-nav" style="padding-bottom:110px;">
+    <div class="date-row">
+      📅 <input type="date" value="${view.date}" onchange="changeDate(this.value)">
+    </div>
+    <div class="scoreboard">
+      <div>
+        <div class="score-main">${presentCount} / ${players.length}</div>
+        <div class="score-label">Present</div>
+      </div>
+      <div class="score-absent">${absentCount}<small>Absent</small></div>
+    </div>
+    <div class="toggle-row">
+      <div>
+        <div class="toggle-label">Include absent in report</div>
+        <div class="toggle-hint">Adds an Absent list to the generated text</div>
+      </div>
+      <div class="toggle-switch ${cat.includeAbsent ? 'on' : ''}" onclick="toggleIncludeAbsent()">
+        <div class="toggle-knob"></div>
+      </div>
+    </div>
+    <button class="mark-all-btn" onclick="markAllPresent()">✓ Mark All Present</button>
+    ${rows}
+  </div>
+  <div class="sticky-bottom">
+    <button class="primary-btn" onclick="generateAttendance()">📋 Generate Attendance</button>
+  </div>
+  `;
+}
+function changeDate(newDate){
+  view.date = newDate;
+  const existing = findSession(view.catId, newDate);
+  const statusMap = {};
+  if (existing){
+    existing.present.forEach(id => statusMap[id]='present');
+    existing.absent.forEach(id => statusMap[id]='absent');
+  }
+  view.statusMap = statusMap;
+  render();
+}
+function setStatus(playerId, status){
+  view.statusMap[playerId] = (view.statusMap[playerId] === status) ? undefined : status;
+  if (view.statusMap[playerId] === undefined) delete view.statusMap[playerId];
+  persistDraftSession();
+  render(true);
+}
+function markAllPresent(){
+  const players = playersOf(view.catId);
+  players.forEach(p => view.statusMap[p.id] = 'present');
+  persistDraftSession();
+  render(true);
+}
+function toggleIncludeAbsent(){
+  const cat = state.categories.find(c=>c.id===view.catId);
+  cat.includeAbsent = !cat.includeAbsent;
+  saveData();
+  render(true);
+}
+function persistDraftSession(){
+  const players = playersOf(view.catId);
+  const present = players.filter(p=>view.statusMap[p.id]==='present').map(p=>p.id);
+  const absent = players.filter(p=>view.statusMap[p.id]==='absent').map(p=>p.id);
+  if (present.length===0 && absent.length===0) return;
+  let list = state.sessions[view.catId] || (state.sessions[view.catId] = []);
+  let existing = list.find(s=>s.date===view.date);
+  if (existing){
+    existing.present = present;
+    existing.absent = absent;
+    existing.timestamp = Date.now();
+  } else {
+    list.push({ id: uid(), date: view.date, present, absent, timestamp: Date.now() });
+  }
+  saveData();
+}
+
+// ---------- GENERATE ----------
+function generateAttendance(){
+  persistDraftSession();
+  const cat = state.categories.find(c=>c.id===view.catId);
+  const players = playersOf(view.catId);
+  const presentPlayers = players.filter(p=>view.statusMap[p.id]==='present');
+  const absentPlayers = players.filter(p=>view.statusMap[p.id]==='absent');
+  const lines = [
+    `BFC ${cat.name} — Training Attendance`,
+    `📅 ${formatDateSlash(view.date)}`,
+    ``,
+    `Present (${presentPlayers.length}):`,
+    ...presentPlayers.map(p=>p.name)
+  ];
+  if (cat.includeAbsent){
+    lines.push(``, `Absent (${absentPlayers.length}):`, ...absentPlayers.map(p=>p.name));
+  }
+  const text = lines.join('\n');
+  setView({ screen:'generate', catId: view.catId, date: view.date, text });
+}
+function renderGenerate(){
+  const cat = state.categories.find(c=>c.id===view.catId);
+  return `
+  <div class="top-header">
+    <div class="brand-row">
+      <button class="back-btn" onclick="openCategory('${view.catId}')">‹</button>
+      <div></div>
+    </div>
+    <div class="header-title" style="margin-top:10px;">
+      <div class="screen-title">Attendance Ready</div>
+      <div class="screen-sub">${esc(cat.name)} · ${formatDateLong(view.date)}</div>
+    </div>
+  </div>
+  <div class="content no-nav">
+    <div class="output-box" id="outputText">${esc(view.text)}</div>
+    <button class="primary-btn" onclick="copyText()">📋 Copy Text</button>
+    <button class="secondary-btn" onclick="shareText()">📤 Share</button>
+    <button class="secondary-btn" onclick="navTo('home')">Done</button>
+  </div>
+  `;
+}
+function copyText(){
+  const text = view.text;
+  const done = () => {
+    const toast = document.createElement('div');
+    toast.className = 'copied-toast';
+    toast.textContent = 'Copied ✓';
+    document.getElementById('app').appendChild(toast);
+    setTimeout(()=>toast.remove(), 1400);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+function fallbackCopy(text, done){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position='fixed'; ta.style.opacity='0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); done(); }catch(e){}
+  document.body.removeChild(ta);
+}
+function shareText(){
+  if (navigator.share){
+    navigator.share({ text: view.text }).catch(()=>{});
+  } else {
+    copyText();
+  }
+}
+
+// ---------- HISTORY ----------
+function renderHistoryList(){
+  const cats = state.categories;
+  let body = '';
+  if (cats.length === 0){
+    body = `<div class="empty-state"><div class="icon">📅</div><h3>No history yet</h3><p>Sessions you record will show up here.</p></div>`;
+  } else {
+    body = cats.map(cat => {
+      const sessions = sessionsOf(cat.id);
+      if (sessions.length === 0) return '';
+      const rows = sessions.map(s => {
+        const total = playersOf(cat.id).length || (s.present.length + s.absent.length);
+        const ratio = total ? s.present.length/total : 0;
+        const badgeClass = ratio >= 0.9 ? 'badge-full' : ratio >= 0.6 ? 'badge-partial' : 'badge-low';
+        return `<div class="session-row" onclick="openHistoryDetail('${cat.id}','${s.id}')">
+          <div class="session-date">${formatDateLong(s.date)}</div>
+          <div class="session-badge ${badgeClass}">${s.present.length} / ${total}</div>
+        </div>`;
+      }).join('');
+      return `<div class="history-group-title">${esc(cat.name)}</div>${rows}`;
+    }).join('');
+    if (!body.trim()){
+      body = `<div class="empty-state"><div class="icon">📅</div><h3>No sessions yet</h3><p>Take attendance for a team and it will appear here.</p></div>`;
+    }
+  }
+  return `
+  <div class="top-header">
+    <div class="brand-row"><div><div class="brand" style="font-size:24px;">History</div></div></div>
+  </div>
+  <div class="content">${body}</div>
+  ${renderBottomNav('history')}
+  `;
+}
+function openHistoryDetail(catId, sessionId){
+  const session = (state.sessions[catId]||[]).find(s=>s.id===sessionId);
+  setView({ screen:'historyDetail', catId, sessionId, session });
+}
+function renderHistoryDetail(){
+  const cat = state.categories.find(c=>c.id===view.catId);
+  const session = view.session;
+  const players = playersOf(view.catId);
+  const nameOf = id => { const p = players.find(pp=>pp.id===id); return p ? p.name : '(removed player)'; };
+  const presentNames = session.present.map(nameOf);
+  const absentNames = session.absent.map(nameOf);
+  const total = presentNames.length + absentNames.length;
+  return `
+  <div class="top-header">
+    <div class="brand-row">
+      <button class="back-btn" onclick="setView({screen:'history'})">‹</button>
+      <div></div>
+    </div>
+    <div class="header-title" style="margin-top:10px;">
+      <div class="screen-title">${esc(cat.name)}</div>
+      <div class="screen-sub">${formatDateLong(session.date)} · ${presentNames.length}/${total} present</div>
+    </div>
+  </div>
+  <div class="content no-nav">
+    <div class="detail-list-title" style="color:var(--present);">✓ Present (${presentNames.length})</div>
+    ${presentNames.length ? presentNames.map(n=>`<div class="detail-player">🟢 ${esc(n)}</div>`).join('') : `<div class="confirm-text">None recorded.</div>`}
+    <div class="detail-list-title" style="color:var(--absent);">✕ Absent (${absentNames.length})</div>
+    ${absentNames.length ? absentNames.map(n=>`<div class="detail-player">🔴 ${esc(n)}</div>`).join('') : `<div class="confirm-text">None recorded.</div>`}
+  </div>
+  `;
+}
+
+// ---------- MANAGE ----------
+function renderManageCategories(){
+  const cats = state.categories;
+  const rows = cats.map(c => {
+    const count = playersOf(c.id).length;
+    return `<div class="cat-card" onclick="setView({screen:'managePlayers', catId:'${c.id}'})">
+      <div class="cat-row-left">
+        <div class="ball-badge">⚽</div>
+        <div>
+          <div class="cat-name">${esc(c.name)}</div>
+          <div class="cat-meta">${count} player${count!==1?'s':''}</div>
+        </div>
+      </div>
+      <div class="cat-arrow">›</div>
+    </div>`;
+  }).join('');
+  return `
+  <div class="top-header">
+    <div class="brand-row"><div><div class="brand" style="font-size:24px;">Manage</div></div></div>
+    <div class="screen-sub" style="margin-top:6px;">Categories &amp; players</div>
+  </div>
+  <div class="content">
+    ${rows}
+    <button class="add-btn" onclick="openAddCategoryModal()">＋ Add Category</button>
+  </div>
+  ${renderBottomNav('manage')}
+  `;
+}
+function renderManagePlayers(){
+  const cat = state.categories.find(c=>c.id===view.catId);
+  const players = playersOf(view.catId);
+  const rows = players.length ? players.map(p => `
+    <div class="manage-player-row">
+      <div>${esc(p.name)}</div>
+      <div>
+        <button class="icon-btn" onclick="openEditPlayerModal('${p.id}')">✎</button>
+        <button class="icon-btn danger" onclick="confirmDeletePlayer('${p.id}')">🗑</button>
+      </div>
+    </div>`).join('') : `<div class="confirm-text">No players yet in ${esc(cat.name)}.</div>`;
+
+  return `
+  <div class="top-header">
+    <div class="brand-row">
+      <button class="back-btn" onclick="setView({screen:'manage'})">‹</button>
+      <div></div>
+    </div>
+    <div class="header-title" style="margin-top:10px;">
+      <div class="screen-title">${esc(cat.name)}</div>
+      <div class="screen-sub">${players.length} player${players.length!==1?'s':''}</div>
+    </div>
+  </div>
+  <div class="content no-nav">
+    ${rows}
+    <button class="add-btn" onclick="openAddPlayerModal()">＋ Add Player</button>
+    <button class="secondary-btn" onclick="openRenameCategoryModal('${view.catId}')">✎ Rename Category</button>
+    <button class="secondary-btn" style="color:var(--absent); border-color:rgba(224,104,92,0.3);" onclick="confirmDeleteCategory('${view.catId}')">🗑 Delete Category</button>
+  </div>
+  `;
+}
+function openAddPlayerModal(){
+  view.modal = `<div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-title">Add Player</div>
+      <input id="playerInput" class="modal-input" placeholder="Player name" autofocus>
+      <div class="modal-btns">
+        <button class="secondary-btn" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="primary-btn" style="flex:1" onclick="submitAddPlayer()">Save</button>
+      </div>
+    </div>
+  </div>`;
+  render();
+  setTimeout(()=>{ const el = document.getElementById('playerInput'); if(el){ el.focus(); el.addEventListener('keydown', e=>{ if(e.key==='Enter') submitAddPlayer(); }); } }, 50);
+}
+function submitAddPlayer(){
+  const el = document.getElementById('playerInput');
+  const val = el.value.trim();
+  if (!val) return;
+  state.players[view.catId] = state.players[view.catId] || [];
+  state.players[view.catId].push({ id: uid(), name: val });
+  saveData();
+  closeModal();
+  render();
+}
+function openEditPlayerModal(playerId){
+  const p = playersOf(view.catId).find(pp=>pp.id===playerId);
+  view.modal = `<div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-title">Edit Player</div>
+      <input id="playerInput" class="modal-input" value="${esc(p.name)}" autofocus>
+      <div class="modal-btns">
+        <button class="secondary-btn" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="primary-btn" style="flex:1" onclick="submitEditPlayer('${playerId}')">Save</button>
+      </div>
+    </div>
+  </div>`;
+  render();
+  setTimeout(()=>{ const el = document.getElementById('playerInput'); if(el){ el.focus(); el.select(); } }, 50);
+}
+function submitEditPlayer(playerId){
+  const el = document.getElementById('playerInput');
+  const val = el.value.trim();
+  if (!val) return;
+  const p = playersOf(view.catId).find(pp=>pp.id===playerId);
+  p.name = val;
+  saveData();
+  closeModal();
+  render();
+}
+function confirmDeletePlayer(playerId){
+  const p = playersOf(view.catId).find(pp=>pp.id===playerId);
+  view.modal = `<div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+    <div class="modal-sheet">
+      <div class="modal-title">Remove ${esc(p.name)}?</div>
+      <div class="confirm-text">They'll be removed from the roster. Past attendance history is kept.</div>
+      <div class="modal-btns">
+        <button class="secondary-btn" style="flex:1" onclick="closeModal()">Cancel</button>
+        <button class="primary-btn" style="flex:1; background:var(--absent); box-shadow:none;" onclick="submitDeletePlayer('${playerId}')">Remove</button>
+      </div>
+    </div>
+  </div>`;
+  render();
+}
+function submitDeletePlayer(playerId){
+  state.players[view.catId] = playersOf(view.catId).filter(p=>p.id!==playerId);
+  saveData();
+  closeModal();
+  render();
+}
+
+// ---------- init ----------
+loadData();
+</script>
+</body>
+</html>
